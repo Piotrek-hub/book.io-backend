@@ -39,10 +39,11 @@ func StartApi() {
 			return err
 		}
 
-		info := db.Register(u.Login, u.Password)
+		userKey, info := db.Register(u.Login, u.Password)
 		return c.JSON(fiber.Map{
-			"status": 200,
-			"info":   info,
+			"status":  200,
+			"userKey": userKey,
+			"info":    info,
 		})
 	})
 

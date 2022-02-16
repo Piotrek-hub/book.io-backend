@@ -36,34 +36,34 @@ func connect(dbName string) (*context.Context, *mongo.Client, *mongo.Collection)
 	return &ctx, client, coll
 }
 
-func Register(login string, password string) string {
+func Register(login string, password string) (string, string) {
 
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
-	_, userExisits := checkIfUserExisits(login, password, coll)
+	_, userExisits := checkIfUserExisits(bson.D{{"Login", login}, {"Password", password}}, coll)
 
 	if !userExisits {
 		userKey := deriveUserKey(login, password)
-		doc := bson.D{{"login", login}, {"password", password}, {"userKey", userKey}}
+		doc := bson.D{{"Login", login}, {"Password", password}, {"UserKey", userKey}}
 		_, err := coll.InsertOne(context.TODO(), doc)
 
 		if err != nil {
-			return "Error during register"
+			return "", "Error during register"
 		}
+		return userKey, "User registered successfully"
 
 	} else {
-		return "User already exisits"
+		return "", "User already exisits"
 	}
 
-	return "User registered successfully"
 }
 
 func Login(login string, password string) string {
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
-	user, userExisits := checkIfUserExisits(login, password, coll)
+	user, userExisits := checkIfUserExisits(bson.D{{"Login", login}, {"Password", password}}, coll)
 
 	if userExisits {
 		return user.UserKey
@@ -82,7 +82,7 @@ func AddBook(bookRequest BookRequest) string {
 	// Check if user exists
 	fmt.Println(bookRequest)
 	userKey := bookRequest.UserKey
-	_, exisits := checkIfUserExisitsByKey(userKey, users)
+	_, exisits := checkIfUserExisits(bson.D{{"UserKey", userKey}}, users)
 
 	if !exisits {
 		return "Caller doesnt exists"
@@ -113,7 +113,7 @@ func SetBookStatus(bookRequest BookRequest) string {
 
 	_, err := coll.UpdateOne(
 		*ctx,
-		bson.M{"Title": bookRequest.Title, "userKey": bookRequest.UserKey},
+		bson.M{"Title": bookRequest.Title, "UserKey": bookRequest.UserKey},
 		bson.D{
 			{"$set", bson.D{{"Status", bookRequest.Status}}},
 		},
@@ -124,5 +124,3 @@ func SetBookStatus(bookRequest BookRequest) string {
 
 	return "Status changed successfully"
 }
-
-

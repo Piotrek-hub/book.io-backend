@@ -20,10 +20,11 @@ func deriveUserKey(login string, password string) string {
 	return mdStr
 }
 
-func checkIfUserExisits(login string, password string, coll *mongo.Collection) (User, bool) {
+// bson.D{{"login", login}, {"password", password}}
+func checkIfUserExisits(filter bson.D, coll *mongo.Collection) (User, bool) {
 	var result bson.M
 	var user User
-	err := coll.FindOne(context.TODO(), bson.D{{"login", login}, {"password", password}}).Decode(&result)
+	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 
 	if err == mongo.ErrNoDocuments {
 		return user, false
@@ -39,24 +40,6 @@ func checkIfUserExisits(login string, password string, coll *mongo.Collection) (
 	return user, true
 }
 
-func checkIfUserExisitsByKey(userKey string, coll *mongo.Collection) (User, bool) {
-	var result bson.M
-	var user User
-	err := coll.FindOne(context.TODO(), bson.D{{"userKey", userKey}}).Decode(&result)
-
-	if err == mongo.ErrNoDocuments {
-		return user, false
-	}
-	if err != nil {
-		fmt.Println("Error calling FindOne():", err)
-		return user, false
-	}
-
-	bsonBytes, _ := bson.Marshal(result)
-	bson.Unmarshal(bsonBytes, &user)
-
-	return user, true
-}
 
 func initBookDoc(bookRequest BookRequest, userKey string) bson.D {
 	return bson.D{
@@ -65,13 +48,13 @@ func initBookDoc(bookRequest BookRequest, userKey string) bson.D {
 		{"Pages", bookRequest.Pages},
 		{"DateCompleted", bookRequest.DateCompleted},
 		{"Status", bookRequest.Status},
-		{"userKey", userKey},
+		{"UserKey", userKey},
 	}
 }
 
 func checkIfBookExists(bookRequest BookRequest, coll *mongo.Collection) bool {
 	var result bson.M
-	err := coll.FindOne(context.TODO(), bson.D{{"Title", bookRequest.Title}, {"userKey", bookRequest.UserKey}}).Decode(&result)
+	err := coll.FindOne(context.TODO(), bson.D{{"Title", bookRequest.Title}, {"UserKey", bookRequest.UserKey}}).Decode(&result)
 
 	if err == mongo.ErrNoDocuments {
 		return false
