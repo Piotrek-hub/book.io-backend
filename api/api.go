@@ -7,26 +7,15 @@ import (
 	db "github.com/piotrek-hub/book.io-backend/db"
 )
 
-// POST Log In (username, password)
-// POST Register (username, password)
-
-// POST 1. Add Book (name, date ended, pages)
-// POST 2. Set Book Status (name, status)
-// POST 3. Delete Book (name)
-// GET 4. Fetch books
-
 func StartApi() {
 	app := fiber.New()
 
-	// Log In
 	app.Post("/login", func(c *fiber.Ctx) error {
-		// Get Headers
 		u := new(db.User)
 		if err := c.BodyParser(u); err != nil {
 			return err
 		}
 
-		// Returun userKey
 		userKey := db.Login(u.Login, u.Password)
 		return c.JSON(fiber.Map{
 			"status":   200,
@@ -34,7 +23,6 @@ func StartApi() {
 		})
 	})
 
-	// Register
 	app.Post("/register", func(c *fiber.Ctx) error {
 		u := new(db.User)
 		if err := c.BodyParser(u); err != nil {
