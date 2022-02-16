@@ -139,3 +139,32 @@ func DeleteBook(bookRequest BookRequest) string {
 	fmt.Println(result)
 	return "Deleted successfully"
 }
+
+func GetBooks() []Book {
+	ctx, client, coll := connect("books")
+	defer client.Disconnect(*ctx)
+
+	result, err := coll.Find(context.TODO(), bson.D{})
+
+	var books []Book
+
+	if err != nil {
+		defer result.Close(*ctx)
+	} else {
+		for result.Next(*ctx) {
+			var res bson.M
+			err := result.Decode(&res)
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				var book Book
+
+				bsonBytes, _ := bson.Marshal(res)
+				bson.Unmarshal(bsonBytes, &book)
+				
+				books = append(books, book)
+			}
+		}
+	}
+	return books
+}

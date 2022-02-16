@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	db "github.com/piotrek-hub/book.io-backend/db"
 )
@@ -99,7 +101,12 @@ func StartApi() {
 
 	// Fetch Books
 	app.Get("/getBooks", func(c *fiber.Ctx) error {
-		return c.SendString("Get Books Page")
+		books := db.GetBooks()
+		fmt.Println(books)
+		return c.JSON(fiber.Map{
+			"status": 200,
+			"books":  books,
+		})
 	})
 
 	app.Listen(":3000")
