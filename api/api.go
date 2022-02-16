@@ -1,8 +1,6 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/gofiber/fiber/v2"
 	db "github.com/piotrek-hub/book.io-backend/db"
 )
@@ -20,13 +18,14 @@ func StartApi() {
 
 	// Log In
 	app.Post("/login", func(c *fiber.Ctx) error {
+		// Get Headers
 		u := new(db.User)
 		if err := c.BodyParser(u); err != nil {
 			return err
 		}
 
+		// Returun userKey
 		userKey := db.Login(u.Login, u.Password)
-
 		return c.JSON(fiber.Map{
 			"status":   200,
 			"user_key": userKey,
@@ -56,8 +55,11 @@ func StartApi() {
 		if bookRequest.UserKey == "" {
 			return c.SendString("Provide user key")
 		}
-
-		return c.Send(c.Body())
+		info := db.AddBook(*bookRequest)
+		return c.JSON(fiber.Map{
+			"status": 200,
+			"info":   info,
+		})
 	})
 
 	// Set Book Status
@@ -69,8 +71,12 @@ func StartApi() {
 		if bookRequest.UserKey == "" {
 			return c.SendString("Provide user key")
 		}
-		fmt.Println(bookRequest)
-		return c.Send(c.Body())
+
+		info := db.SetBookStatus(*bookRequest)
+		return c.JSON(fiber.Map{
+			"status": 200,
+			"info":   info,
+		})
 	})
 
 	// Delete Book
