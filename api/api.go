@@ -81,7 +81,7 @@ func StartApi() {
 	})
 
 	// Delete Book
-	app.Delete("/deleteBook", func(c *fiber.Ctx) error {
+	app.Post("/deleteBook", func(c *fiber.Ctx) error {
 		bookRequest := new(db.BookRequest)
 		if err := c.BodyParser(bookRequest); err != nil {
 			return err
@@ -89,7 +89,12 @@ func StartApi() {
 		if bookRequest.UserKey == "" {
 			return c.SendString("Provide user key")
 		}
-		return c.Send(c.Body())
+
+		info := db.DeleteBook(*bookRequest)
+		return c.JSON(fiber.Map{
+			"status": 200,
+			"info":   info,
+		})
 	})
 
 	// Fetch Books

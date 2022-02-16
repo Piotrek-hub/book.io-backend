@@ -103,8 +103,6 @@ func SetBookStatus(bookRequest BookRequest) string {
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
-	fmt.Println(bookRequest)
-
 	bookExists := checkIfBookExists(bookRequest, coll)
 
 	if !bookExists {
@@ -123,4 +121,21 @@ func SetBookStatus(bookRequest BookRequest) string {
 	}
 
 	return "Status changed successfully"
+}
+
+func DeleteBook(bookRequest BookRequest) string {
+	ctx, client, coll := connect("books")
+	defer client.Disconnect(*ctx)
+
+	if !checkIfBookExists(bookRequest, coll) {
+		return "Book doesnt exists"
+	}
+
+	result, err := coll.DeleteOne(*ctx, bson.M{"Title": bookRequest.Title, "UserKey": bookRequest.UserKey})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(result)
+	return "Deleted successfully"
 }
