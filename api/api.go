@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	db "github.com/piotrek-hub/book.io-backend/db"
 )
 
 func StartApi() {
 	app := fiber.New()
-
+	app.Use(cors.New())
+	
 	app.Post("/login", func(c *fiber.Ctx) error {
 		u := new(db.User)
 		if err := c.BodyParser(u); err != nil {
