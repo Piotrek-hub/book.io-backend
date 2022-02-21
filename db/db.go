@@ -82,13 +82,18 @@ func AddBook(bookRequest BookRequest) string {
 	// Check if user exists
 	fmt.Println(bookRequest)
 	userKey := bookRequest.UserKey
+	username := bookRequest.Username
 	_, exisits := checkIfUserExisits(bson.D{{"UserKey", userKey}}, users)
 
 	if !exisits {
 		return "Caller doesnt exists"
 	}
 
-	doc := initBookDoc(bookRequest, userKey)
+	if len(username) == 0 {
+		return "provide username"
+	}
+
+	doc := initBookDoc(bookRequest, userKey, username)
 
 	_, err := coll.InsertOne(context.TODO(), doc)
 
@@ -140,11 +145,11 @@ func DeleteBook(bookRequest BookRequest) string {
 	return "Deleted successfully"
 }
 
-func GetBooks() []Book {
+func GetBooks(username string) []Book {
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
-	result, err := coll.Find(context.TODO(), bson.D{})
+	result, err := coll.Find(context.TODO(), bson.M{"Username": username})
 
 	var books []Book
 
@@ -161,10 +166,44 @@ func GetBooks() []Book {
 
 				bsonBytes, _ := bson.Marshal(res)
 				bson.Unmarshal(bsonBytes, &book)
-				
+
 				books = append(books, book)
 			}
 		}
 	}
 	return books
+}
+
+func GetUsers() []string {
+	type Res struct {
+		Login string
+	}
+
+	ctx, client, coll := connect("users")
+	defer client.Disconnect(*ctx)
+
+	result, err := coll.Find(context.TODO(), bson.M{})
+
+	var users []string
+
+	if err != nil {
+		defer result.Close(*ctx)
+	} else {
+		for result.Next(*ctx) {
+			var res bson.M
+			err := result.Decode(&res)
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				var user Res
+
+				bsonBytes, _ := bson.Marshal(res)
+				bson.Unmarshal(bsonBytes, &user)
+
+				users = append(users, user.Login)
+			}
+		}
+	}
+
+	return users
 }

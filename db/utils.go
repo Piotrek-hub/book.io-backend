@@ -41,7 +41,7 @@ func checkIfUserExisits(filter bson.D, coll *mongo.Collection) (User, bool) {
 }
 
 
-func initBookDoc(bookRequest BookRequest, userKey string) bson.D {
+func initBookDoc(bookRequest BookRequest, userKey string, username string) bson.D {
 	return bson.D{
 		{"Title", bookRequest.Title},
 		{"Author", bookRequest.Author},
@@ -49,6 +49,7 @@ func initBookDoc(bookRequest BookRequest, userKey string) bson.D {
 		{"DateCompleted", bookRequest.DateCompleted},
 		{"Status", bookRequest.Status},
 		{"UserKey", userKey},
+		{"Username", username},
 	}
 }
 
