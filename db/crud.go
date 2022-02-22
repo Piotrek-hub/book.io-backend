@@ -2,13 +2,14 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/piotrek-hub/book.io-backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"log"
 )
 
-func Register(login string, password string) (string, string) {
+func Register(login string, password string) (string, error) {
 
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
@@ -21,12 +22,12 @@ func Register(login string, password string) (string, string) {
 		_, err := coll.InsertOne(context.TODO(), doc)
 
 		if err != nil {
-			return "", "Error during register"
+			return "", errors.New("Error during register")
 		}
-		return userKey, "User registered successfully"
+		return userKey, nil
 
 	} else {
-		return "", "User already exisits"
+		return "", errors.New("User already exisits")
 	}
 
 }
@@ -51,25 +52,19 @@ func AddBook(bookRequest utils.BookRequest) string {
 
 	usersCtx, usersClient, users := connect("users")
 	defer usersClient.Disconnect(*usersCtx)
-
-	// Check if user exists
-	fmt.Println(bookRequest)
-	userKey := bookRequest.UserKey
-	username := bookRequest.Username
-	_, exisits := utils.CheckIfUserExists(bson.D{{"UserKey", userKey}}, users)
+	
+	_, exisits := utils.CheckIfUserExists(bson.D{{"UserKey", bookRequest.UserKey}}, users)
 
 	if !exisits {
 		return "Caller doesnt exists"
 	}
-
-	if len(username) == 0 {
+	if len(bookRequest.Username) == 0 {
 		return "provide username"
 	}
 
-	doc := utils.InitBookDoc(bookRequest, userKey, username)
+	doc := utils.InitBookDoc(bookRequest, bookRequest.UserKey, bookRequest.Username)
 
 	_, err := coll.InsertOne(context.TODO(), doc)
-
 	if err != nil {
 		return "Error while adding book to db"
 	}

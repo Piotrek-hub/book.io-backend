@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/piotrek-hub/book.io-backend/db"
@@ -32,11 +31,16 @@ func register(c *fiber.Ctx) error {
 		return err
 	}
 
-	userKey, info := db.Register(u.Login, u.Password)
+	userKey, err := db.Register(u.Login, u.Password)
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"success":  false,
+			"error": err.Error(),
+		})
+	}
 	return c.JSON(fiber.Map{
-		"succes":  200,
+		"success":  true,
 		"userKey": userKey,
-		"info":    info,
 	})
 }
 
