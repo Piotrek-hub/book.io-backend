@@ -10,7 +10,12 @@ type BookRequest struct {
 	Status        string `form:"status"`
 }
 
+type Resp struct {
+	UserKey string `form:"user_key"`
+}
+
 type Config struct {
 	Login string
 	Password string
 }
+

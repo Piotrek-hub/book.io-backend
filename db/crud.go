@@ -32,54 +32,65 @@ func Register(login string, password string) (string, error) {
 
 }
 
-func Login(login string, password string) string {
+func Login(login string, password string) (string, error) {
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
 	userKey, userExisits := utils.CheckIfUserExists(bson.D{{"Login", login}, {"Password", password}}, coll)
 
 	if userExisits {
-		return userKey
-	} else {
-		return "User doesnt exists"
+		return userKey, nil
 	}
-	return ""
+	return "", errors.New("User doesnt exists")
 }
 
-func AddBook(bookRequest utils.BookRequest) string {
+func AddBook(bookRequest utils.BookRequest) error {
+	if bookRequest.UserKey == "" {
+		return errors.New("User key not provided")
+	}
+	if len(bookRequest.Username) == 0 {
+		return errors.New("Username not provided")
+	}
+
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
 	usersCtx, usersClient, users := connect("users")
 	defer usersClient.Disconnect(*usersCtx)
-	
-	_, exisits := utils.CheckIfUserExists(bson.D{{"UserKey", bookRequest.UserKey}}, users)
 
-	if !exisits {
-		return "Caller doesnt exists"
+	_, userExists := utils.CheckIfUserExists(bson.D{{"UserKey", bookRequest.UserKey}}, users)
+	bookExists := utils.CheckIfBookExists(bookRequest, coll)
+
+
+	if bookExists {
+		return errors.New("Book already exists")
 	}
-	if len(bookRequest.Username) == 0 {
-		return "provide username"
+	if !userExists || !bookExists {
+		return errors.New("User doesnt userExists or book already!")
 	}
 
 	doc := utils.InitBookDoc(bookRequest, bookRequest.UserKey, bookRequest.Username)
 
 	_, err := coll.InsertOne(context.TODO(), doc)
 	if err != nil {
-		return "Error while adding book to db"
+		return errors.New("Error while adding book to db")
 	}
 
-	return "Book added successfully"
+	return nil
 }
 
-func SetBookStatus(bookRequest utils.BookRequest) string {
+func SetBookStatus(bookRequest utils.BookRequest) (error) {
+	if bookRequest.UserKey == "" {
+		return errors.New("Provide user key")
+	}
+
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
 	bookExists := utils.CheckIfBookExists(bookRequest, coll)
 
 	if !bookExists {
-		return "Book doesnt exisits"
+		return errors.New("Book doesnt exists")
 	}
 
 	_, err := coll.UpdateOne(
@@ -93,15 +104,19 @@ func SetBookStatus(bookRequest utils.BookRequest) string {
 		log.Fatal(err)
 	}
 
-	return "Status changed successfully"
+	return nil
 }
 
-func DeleteBook(bookRequest utils.BookRequest) string {
+func DeleteBook(bookRequest utils.BookRequest) (error) {
+	if bookRequest.UserKey == "" {
+		return errors.New("User key not provided")
+	}
+
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
 	if !utils.CheckIfBookExists(bookRequest, coll) {
-		return "Book doesnt exists"
+		return errors.New("Book doesnt exists")
 	}
 
 	result, err := coll.DeleteOne(*ctx, bson.M{"Title": bookRequest.Title, "UserKey": bookRequest.UserKey})
@@ -110,36 +125,36 @@ func DeleteBook(bookRequest utils.BookRequest) string {
 	}
 
 	fmt.Println(result)
-	return "Deleted successfully"
+	return nil
 }
 
-func GetBooks(username string) []Book {
+func GetBooks(username string) ([]Book, error) {
+	var books []Book
+
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
 	result, err := coll.Find(context.TODO(), bson.M{"Username": username})
-
-	var books []Book
-
 	if err != nil {
-		defer result.Close(*ctx)
-	} else {
-		for result.Next(*ctx) {
-			var res bson.M
-			err := result.Decode(&res)
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				var book Book
+		return books, err
+	}
 
-				bsonBytes, _ := bson.Marshal(res)
-				bson.Unmarshal(bsonBytes, &book)
+	for result.Next(*ctx) {
+		var res bson.M
+		err := result.Decode(&res)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			var book Book
 
-				books = append(books, book)
-			}
+			bsonBytes, _ := bson.Marshal(res)
+			bson.Unmarshal(bsonBytes, &book)
+
+			books = append(books, book)
 		}
 	}
-	return books
+
+	return books, nil
 }
 
 func GetUsers() []string {

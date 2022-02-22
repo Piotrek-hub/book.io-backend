@@ -19,7 +19,6 @@ func DeriveUserKey(login string, password string) string {
 	hash.Write([]byte(login + password + time.Now().String()))
 	md := hash.Sum(nil)
 	mdStr := hex.EncodeToString(md)
-	fmt.Println(mdStr)
 	return mdStr
 }
 
@@ -28,7 +27,6 @@ func CheckIfUserExists(filter bson.D, coll *mongo.Collection) (string, bool) {
 	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 
 	userKey := fmt.Sprintf("%v", result["UserKey"])
-	fmt.Println(userKey)
 
 	if err == mongo.ErrNoDocuments {
 		return "", false
@@ -57,11 +55,7 @@ func CheckIfBookExists(bookRequest BookRequest, coll *mongo.Collection) bool {
 	var result bson.M
 	err := coll.FindOne(context.TODO(), bson.D{{"Title", bookRequest.Title}, {"UserKey", bookRequest.UserKey}}).Decode(&result)
 
-	if err == mongo.ErrNoDocuments {
-		return false
-	}
-	if err != nil {
-		fmt.Println("Error calling FindOne():", err)
+	if err == mongo.ErrNoDocuments || err != nil{
 		return false
 	}
 
