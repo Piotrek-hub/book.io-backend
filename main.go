@@ -1,9 +1,8 @@
 package main
 
-import (
-	"github.com/piotrek-hub/book.io-backend/api"
-)
+import "github.com/piotrek-hub/book.io-backend/server"
 
 func main() {
-	api.StartApi()
+	server.StartApi()
+
 }

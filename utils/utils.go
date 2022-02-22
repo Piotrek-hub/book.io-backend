@@ -1,17 +1,20 @@
-package db
+package utils
 
 import (
 	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func deriveUserKey(login string, password string) string {
+func DeriveUserKey(login string, password string) string {
 	hash := sha512.New()
 	hash.Write([]byte(login + password + time.Now().String()))
 	md := hash.Sum(nil)
@@ -20,28 +23,25 @@ func deriveUserKey(login string, password string) string {
 	return mdStr
 }
 
-// bson.D{{"login", login}, {"password", password}}
-func checkIfUserExisits(filter bson.D, coll *mongo.Collection) (User, bool) {
+func CheckIfUserExists(filter bson.D, coll *mongo.Collection) (string, bool) {
 	var result bson.M
-	var user User
 	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 
+	userKey := fmt.Sprintf("%v", result["UserKey"])
+	fmt.Println(userKey)
+
 	if err == mongo.ErrNoDocuments {
-		return user, false
+		return "", false
 	}
 	if err != nil {
 		fmt.Println("Error calling FindOne():", err)
-		return user, false
+		return "", false
 	}
 
-	bsonBytes, _ := bson.Marshal(result)
-	bson.Unmarshal(bsonBytes, &user)
-
-	return user, true
+	return userKey, true
 }
 
-
-func initBookDoc(bookRequest BookRequest, userKey string, username string) bson.D {
+func InitBookDoc(bookRequest BookRequest, userKey string, username string) bson.D {
 	return bson.D{
 		{"Title", bookRequest.Title},
 		{"Author", bookRequest.Author},
@@ -53,7 +53,7 @@ func initBookDoc(bookRequest BookRequest, userKey string, username string) bson.
 	}
 }
 
-func checkIfBookExists(bookRequest BookRequest, coll *mongo.Collection) bool {
+func CheckIfBookExists(bookRequest BookRequest, coll *mongo.Collection) bool {
 	var result bson.M
 	err := coll.FindOne(context.TODO(), bson.D{{"Title", bookRequest.Title}, {"UserKey", bookRequest.UserKey}}).Decode(&result)
 
@@ -66,4 +66,26 @@ func checkIfBookExists(bookRequest BookRequest, coll *mongo.Collection) bool {
 	}
 
 	return true
+}
+
+func GetDatabaseUri() (string) {
+	yfile, err := ioutil.ReadFile("./config/config.yaml")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data := make(map[string]string)
+
+	err = yaml.Unmarshal(yfile, &data)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var values []string;
+	for _, value := range data {
+		values = append(values, value)
+	}
+	return "mongodb+srv://"+values[0]+":"+values[1]+"@cluster0.ffdei.mongodb.net/Cluster0?retryWrites=true&w=majority"
 }

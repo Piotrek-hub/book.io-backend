@@ -3,48 +3,20 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
-	"time"
-
+	"github.com/piotrek-hub/book.io-backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"log"
 )
-
-// env variables
-
-const uri = "mongodb+srv://mesi:qwer1234@cluster0.ffdei.mongodb.net/Cluster0?retryWrites=true&w=majority"
-
-func connect(dbName string) (*context.Context, *mongo.Client, *mongo.Collection) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
-	if err != nil {
-		log.Fatal(err)
-	}
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err = client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = client.Ping(ctx, readpref.Primary())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	coll := client.Database("bookio").Collection(dbName)
-	return &ctx, client, coll
-}
 
 func Register(login string, password string) (string, string) {
 
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
-	_, userExisits := checkIfUserExisits(bson.D{{"Login", login}, {"Password", password}}, coll)
+	_, exisits := utils.CheckIfUserExists(bson.D{{"Login", login}, {"Password", password}}, coll)
 
-	if !userExisits {
-		userKey := deriveUserKey(login, password)
+	if !exisits {
+		userKey := utils.DeriveUserKey(login, password)
 		doc := bson.D{{"Login", login}, {"Password", password}, {"UserKey", userKey}}
 		_, err := coll.InsertOne(context.TODO(), doc)
 
@@ -63,16 +35,17 @@ func Login(login string, password string) string {
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
-	user, userExisits := checkIfUserExisits(bson.D{{"Login", login}, {"Password", password}}, coll)
+	userKey, userExisits := utils.CheckIfUserExists(bson.D{{"Login", login}, {"Password", password}}, coll)
 
 	if userExisits {
-		return user.UserKey
+		return userKey
 	} else {
 		return "User doesnt exists"
 	}
+	return ""
 }
 
-func AddBook(bookRequest BookRequest) string {
+func AddBook(bookRequest utils.BookRequest) string {
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
@@ -83,7 +56,7 @@ func AddBook(bookRequest BookRequest) string {
 	fmt.Println(bookRequest)
 	userKey := bookRequest.UserKey
 	username := bookRequest.Username
-	_, exisits := checkIfUserExisits(bson.D{{"UserKey", userKey}}, users)
+	_, exisits := utils.CheckIfUserExists(bson.D{{"UserKey", userKey}}, users)
 
 	if !exisits {
 		return "Caller doesnt exists"
@@ -93,7 +66,7 @@ func AddBook(bookRequest BookRequest) string {
 		return "provide username"
 	}
 
-	doc := initBookDoc(bookRequest, userKey, username)
+	doc := utils.InitBookDoc(bookRequest, userKey, username)
 
 	_, err := coll.InsertOne(context.TODO(), doc)
 
@@ -104,11 +77,11 @@ func AddBook(bookRequest BookRequest) string {
 	return "Book added successfully"
 }
 
-func SetBookStatus(bookRequest BookRequest) string {
+func SetBookStatus(bookRequest utils.BookRequest) string {
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
-	bookExists := checkIfBookExists(bookRequest, coll)
+	bookExists := utils.CheckIfBookExists(bookRequest, coll)
 
 	if !bookExists {
 		return "Book doesnt exisits"
@@ -128,11 +101,11 @@ func SetBookStatus(bookRequest BookRequest) string {
 	return "Status changed successfully"
 }
 
-func DeleteBook(bookRequest BookRequest) string {
+func DeleteBook(bookRequest utils.BookRequest) string {
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
-	if !checkIfBookExists(bookRequest, coll) {
+	if !utils.CheckIfBookExists(bookRequest, coll) {
 		return "Book doesnt exists"
 	}
 
