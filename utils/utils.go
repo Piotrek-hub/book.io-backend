@@ -2,9 +2,8 @@ package utils
 
 import (
 	"context"
-	"crypto/sha512"
-	"encoding/hex"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
@@ -14,19 +13,31 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func DeriveUserKey(login string, password string) string {
-	hash := sha512.New()
-	hash.Write([]byte(login + password + time.Now().String()))
-	md := hash.Sum(nil)
-	mdStr := hex.EncodeToString(md)
-	return mdStr
+var mySigningKey = []byte("mysecretphrase")
+
+func GenerateToken(login string) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+
+	claims["authorized"] = true
+	claims["user"] = login
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+
+	tokenString, err := token.SignedString(mySigningKey)
+
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }
 
 func CheckIfUserExists(filter bson.D, coll *mongo.Collection) (string, bool) {
 	var result bson.M
 	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 
-	userKey := fmt.Sprintf("%v", result["UserKey"])
+	token := fmt.Sprintf("%v", result["token"])
 
 	if err == mongo.ErrNoDocuments {
 		return "", false
@@ -36,24 +47,23 @@ func CheckIfUserExists(filter bson.D, coll *mongo.Collection) (string, bool) {
 		return "", false
 	}
 
-	return userKey, true
+	return token, true
 }
 
-func InitBookDoc(bookRequest BookRequest, userKey string, username string) bson.D {
+func InitBookDoc(bookRequest BookRequest, token string, username string) bson.D {
 	return bson.D{
-		{"Title", bookRequest.Title},
-		{"Author", bookRequest.Author},
-		{"Pages", bookRequest.Pages},
-		{"DateCompleted", bookRequest.DateCompleted},
-		{"Status", bookRequest.Status},
-		{"UserKey", userKey},
-		{"Username", username},
+		{"title", bookRequest.Title},
+		{"author", bookRequest.Author},
+		{"pages", bookRequest.Pages},
+		{"dateCompleted", bookRequest.DateCompleted},
+		{"status", bookRequest.Status},
+		{"username", username},
 	}
 }
 
 func CheckIfBookExists(bookRequest BookRequest, coll *mongo.Collection) bool {
 	var result bson.M
-	err := coll.FindOne(context.TODO(), bson.D{{"Title", bookRequest.Title}, {"UserKey", bookRequest.UserKey}}).Decode(&result)
+	err := coll.FindOne(context.TODO(), bson.D{{"title", bookRequest.Title}, {"username", bookRequest.Username}}).Decode(&result)
 
 	if err == mongo.ErrNoDocuments || err != nil{
 		return false
@@ -82,4 +92,12 @@ func GetDatabaseUri() (string) {
 		values = append(values, value)
 	}
 	return "mongodb+srv://"+values[0]+":"+values[1]+"@cluster0.ffdei.mongodb.net/Cluster0?retryWrites=true&w=majority"
+}
+
+func isAuthorized()
+
+func LogRequest[T any](message string, request T) {
+	fmt.Print(time.Now().String(), " ")
+	fmt.Print(message, " ")
+	fmt.Print(request, "\n")
 }

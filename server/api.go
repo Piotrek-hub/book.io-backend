@@ -15,7 +15,8 @@ func login(c *fiber.Ctx) error {
 		return err
 	}
 
-	userKey, err := db.Login(u.Login, u.Password)
+	utils.LogRequest[db.User]("Login", *u)
+	token, err := db.Login(u.Login, u.Password)
 	if err != nil {
 		return c.JSON(fiber.Map{
 			"success": false,
@@ -25,7 +26,7 @@ func login(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success":   true,
-		"user_key": userKey,
+		"token": token,
 	})
 }
 
@@ -35,7 +36,8 @@ func register(c *fiber.Ctx) error {
 		return err
 	}
 
-	userKey, err := db.Register(u.Login, u.Password)
+	utils.LogRequest[db.User]("Register", *u)
+	token, err := db.Register(u.Login, u.Password)
 	if err != nil {
 		return c.JSON(fiber.Map{
 			"success":  false,
@@ -45,7 +47,7 @@ func register(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"success":  true,
-		"userKey": userKey,
+		"token": token,
 	})
 }
 
@@ -55,6 +57,7 @@ func addBook(c *fiber.Ctx) error {
 		return err
 	}
 
+	utils.LogRequest[utils.BookRequest]("AddBook", *bookRequest)
 	err := db.AddBook(*bookRequest)
 	if err != nil {
 		return c.JSON(fiber.Map{
@@ -74,6 +77,7 @@ func setBookStatus(c *fiber.Ctx) error {
 		return err
 	}
 
+	utils.LogRequest[utils.BookRequest]("SetBookStatus", *bookRequest)
 	err := db.SetBookStatus(*bookRequest)
 	if err != nil {
 		return c.JSON(fiber.Map{
@@ -93,6 +97,7 @@ func deleteBook(c *fiber.Ctx) error {
 		return err
 	}
 
+	utils.LogRequest[utils.BookRequest]("DeleteBook", *bookRequest)
 	err := db.DeleteBook(*bookRequest)
 	if err != nil {
 		return c.JSON(fiber.Map{
@@ -112,6 +117,7 @@ func getBooks(c *fiber.Ctx) error {
 		return err
 	}
 
+	utils.LogRequest[utils.BookRequest]("GetBooks", *bookRequest)
 	books, err := db.GetBooks(bookRequest.Username)
 	if err != nil {
 		return c.JSON(fiber.Map{
@@ -129,6 +135,7 @@ func getBooks(c *fiber.Ctx) error {
 func getUsers(c *fiber.Ctx) error {
 	users := db.GetUsers()
 
+	utils.LogRequest[[]string]("GetUsers", users)
 	return c.JSON(fiber.Map{
 		"success": true,
 		"users":  users,

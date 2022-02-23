@@ -10,21 +10,23 @@ import (
 )
 
 func Register(login string, password string) (string, error) {
-
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
-	_, exisits := utils.CheckIfUserExists(bson.D{{"Login", login}, {"Password", password}}, coll)
+	_, exists := utils.CheckIfUserExists(bson.D{{"login", login}, {"password", password}}, coll)
 
-	if !exisits {
-		userKey := utils.DeriveUserKey(login, password)
-		doc := bson.D{{"Login", login}, {"Password", password}, {"UserKey", userKey}}
-		_, err := coll.InsertOne(context.TODO(), doc)
+	if !exists {
+		token, err := utils.GenerateToken(login)
+		if err != nil {
+			return "", err
+		}
+		doc := bson.D{{"login", login}, {"password", password}, {"token", token}}
+		_, err = coll.InsertOne(context.TODO(), doc)
 
 		if err != nil {
 			return "", errors.New("Error during register")
 		}
-		return userKey, nil
+		return token, nil
 
 	} else {
 		return "", errors.New("User already exisits")
@@ -36,42 +38,42 @@ func Login(login string, password string) (string, error) {
 	ctx, client, coll := connect("users")
 	defer client.Disconnect(*ctx)
 
-	userKey, userExisits := utils.CheckIfUserExists(bson.D{{"Login", login}, {"Password", password}}, coll)
+	token, userExisits := utils.CheckIfUserExists(bson.D{{"login", login}, {"password", password}}, coll)
 
 	if userExisits {
-		return userKey, nil
+		return token, nil
 	}
 	return "", errors.New("User doesnt exists")
 }
 
 func AddBook(bookRequest utils.BookRequest) error {
-	if bookRequest.UserKey == "" {
+	if bookRequest.Token == "" {
 		return errors.New("User key not provided")
 	}
 	if len(bookRequest.Username) == 0 {
 		return errors.New("Username not provided")
 	}
 
-	ctx, client, coll := connect("books")
+	ctx, client, books := connect("books")
 	defer client.Disconnect(*ctx)
 
 	usersCtx, usersClient, users := connect("users")
 	defer usersClient.Disconnect(*usersCtx)
 
-	_, userExists := utils.CheckIfUserExists(bson.D{{"UserKey", bookRequest.UserKey}}, users)
-	bookExists := utils.CheckIfBookExists(bookRequest, coll)
-
+	_, userExists := utils.CheckIfUserExists(bson.D{{"token", bookRequest.Token}}, users)
+	bookExists := utils.CheckIfBookExists(bookRequest, books)
 
 	if bookExists {
 		return errors.New("Book already exists")
 	}
-	if !userExists || !bookExists {
+	if !userExists  {
 		return errors.New("User doesnt userExists or book already!")
 	}
 
-	doc := utils.InitBookDoc(bookRequest, bookRequest.UserKey, bookRequest.Username)
+	doc := utils.InitBookDoc(bookRequest, bookRequest.Token, bookRequest.Username)
+	fmt.Println(doc)
 
-	_, err := coll.InsertOne(context.TODO(), doc)
+	_, err := books.InsertOne(context.TODO(), doc)
 	if err != nil {
 		return errors.New("Error while adding book to db")
 	}
@@ -80,7 +82,7 @@ func AddBook(bookRequest utils.BookRequest) error {
 }
 
 func SetBookStatus(bookRequest utils.BookRequest) (error) {
-	if bookRequest.UserKey == "" {
+	if bookRequest.Token == "" {
 		return errors.New("Provide user key")
 	}
 
@@ -95,7 +97,7 @@ func SetBookStatus(bookRequest utils.BookRequest) (error) {
 
 	_, err := coll.UpdateOne(
 		*ctx,
-		bson.M{"Title": bookRequest.Title, "UserKey": bookRequest.UserKey},
+		bson.M{"title": bookRequest.Title, "token": bookRequest.Token},
 		bson.D{
 			{"$set", bson.D{{"Status", bookRequest.Status}}},
 		},
@@ -108,7 +110,7 @@ func SetBookStatus(bookRequest utils.BookRequest) (error) {
 }
 
 func DeleteBook(bookRequest utils.BookRequest) (error) {
-	if bookRequest.UserKey == "" {
+	if bookRequest.Token == "" {
 		return errors.New("User key not provided")
 	}
 
@@ -119,7 +121,7 @@ func DeleteBook(bookRequest utils.BookRequest) (error) {
 		return errors.New("Book doesnt exists")
 	}
 
-	result, err := coll.DeleteOne(*ctx, bson.M{"Title": bookRequest.Title, "UserKey": bookRequest.UserKey})
+	result, err := coll.DeleteOne(*ctx, bson.M{"title": bookRequest.Title, "token": bookRequest.Token})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -134,7 +136,7 @@ func GetBooks(username string) ([]Book, error) {
 	ctx, client, coll := connect("books")
 	defer client.Disconnect(*ctx)
 
-	result, err := coll.Find(context.TODO(), bson.M{"Username": username})
+	result, err := coll.Find(context.TODO(), bson.M{"username": username})
 	if err != nil {
 		return books, err
 	}

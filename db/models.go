@@ -3,7 +3,7 @@ package db
 type User struct {
 	Login    string `form:"login"`
 	Password string `form:"password"`
-	UserKey  string `form:"user_key"`
+	Token  string `form:"user_key"`
 }
 
 type Book struct {
