@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/piotrek-hub/book.io-backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"log"
@@ -71,7 +70,6 @@ func AddBook(bookRequest utils.BookRequest) error {
 	}
 
 	doc := utils.InitBookDoc(bookRequest, bookRequest.Token, bookRequest.Username)
-	fmt.Println(doc)
 
 	_, err := books.InsertOne(context.TODO(), doc)
 	if err != nil {
@@ -126,7 +124,7 @@ func DeleteBook(bookRequest utils.BookRequest) (error) {
 		log.Fatal(err)
 	}
 
-	fmt.Println(result)
+	log.Println(result)
 	return nil
 }
 

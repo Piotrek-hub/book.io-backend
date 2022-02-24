@@ -40,10 +40,12 @@ func CheckIfUserExists(filter bson.D, coll *mongo.Collection) (string, bool) {
 	token := fmt.Sprintf("%v", result["token"])
 
 	if err == mongo.ErrNoDocuments {
+		log.SetFlags(log.Ldate | log.Lshortfile)
+		log.Println("User doesnt exists")
 		return "", false
 	}
+
 	if err != nil {
-		fmt.Println("Error calling FindOne():", err)
 		return "", false
 	}
 
@@ -94,10 +96,6 @@ func GetDatabaseUri() (string) {
 	return "mongodb+srv://"+values[0]+":"+values[1]+"@cluster0.ffdei.mongodb.net/Cluster0?retryWrites=true&w=majority"
 }
 
-func isAuthorized()
-
 func LogRequest[T any](message string, request T) {
-	fmt.Print(time.Now().String(), " ")
-	fmt.Print(message, " ")
-	fmt.Print(request, "\n")
+	log.Println(message, request)
 }
